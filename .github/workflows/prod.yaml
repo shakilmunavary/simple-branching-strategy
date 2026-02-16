@@ -1,0 +1,35 @@
+name: Dev Pipeline
+
+on:
+  push:
+    branches:
+      - 'feature_*'
+
+jobs:
+  dev-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate release_version.txt
+        run: |
+          if [ ! -f release_version.txt ]; then
+            echo "❌ release_version.txt not found!"
+            exit 1
+          fi
+          VERSION=$(grep '^version:' release_version.txtt | awk '{print $2}')
+          DESCRIPTION=$(grep '^Description:' release_version.txt | cut -d':' -f2- | xargs)
+          if [ -z "$VERSION" ] || [ -z "$DESCRIPTION" ]; then
+            echo "❌ Missing version or description"
+            exit 1
+          fi
+          echo "✅ Version: $VERSION"
+          echo "✅ Description: $DESCRIPTION"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Build snapshot image
+        run: |
+          echo "🚀 Building snapshot image abc:snapshot_${VERSION}-${GITHUB_SHA}"
+          echo "Deploying to Dev cluster..."
