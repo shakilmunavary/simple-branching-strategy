@@ -1,13 +1,19 @@
-name: Dev Pipeline
+name: Prod Pipeline
 
 on:
-  push:
-    branches:
-      - 'feature_*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to deploy (e.g., 1.25.5)'
+        required: true
 
 jobs:
-  dev-build:
+  prod-deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://prod.example.com   # optional, for audit trail
+      # Configure required reviewers in GitHub repo settings for approval
 
     steps:
       - name: Checkout repository
@@ -19,17 +25,16 @@ jobs:
             echo "❌ release_version.txt not found!"
             exit 1
           fi
-          VERSION=$(grep '^version:' release_version.txtt | awk '{print $2}')
-          DESCRIPTION=$(grep '^Description:' release_version.txt | cut -d':' -f2- | xargs)
+          VERSION=$(grep -i '^version:' release_version.txt | awk '{print $2}')
+          DESCRIPTION=$(grep -i '^description:' release_version.txt | cut -d':' -f2- | xargs)
           if [ -z "$VERSION" ] || [ -z "$DESCRIPTION" ]; then
             echo "❌ Missing version or description"
             exit 1
           fi
-          echo "✅ Version: $VERSION"
+          echo "✅ Version in file: $VERSION"
           echo "✅ Description: $DESCRIPTION"
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
 
-      - name: Build snapshot image
+      - name: Deploy to Prod
         run: |
-          echo "🚀 Building snapshot image abc:snapshot_${VERSION}-${GITHUB_SHA}"
-          echo "Deploying to Dev cluster..."
+          echo "🚀 Deploying version ${{ github.event.inputs.version }} to Prod cluster..."
+          echo "✅ Prod deployment approved and simulated."
