@@ -54,7 +54,7 @@ jobs:
             echo "❌ release_version.txt not found!"
             exit 1
           fi
-          VERSION=$(grep '^version:' release_version.txt | awk '{print $2}')
+          VERSION=$(grep 'version:' release_version.txt | awk '{print $2}')
           DESCRIPTION=$(grep 'Description:' release_version.txt | cut -d':' -f2- | xargs)
           if [ -z "$VERSION" ] || [ -z "$DESCRIPTION" ]; then
             echo "❌ Missing version or description"
