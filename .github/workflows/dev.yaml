@@ -1,0 +1,96 @@
+name: Dev Pipeline
+
+on:
+  push:
+    branches:
+      - 'feature_*'
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+
+jobs:
+  dev-build:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate release_version.txt
+        run: |
+          if [ ! -f release_version.txt ]; then
+            echo "❌ release_version.txt not found!"
+            exit 1
+          fi
+          VERSION=$(grep 'version:' release_version.txt | awk '{print $2}')
+          DESCRIPTION=$(grep 'Description:' release_version.txt | cut -d':' -f2- | xargs)
+          if [ -z "$VERSION" ] || [ -z "$DESCRIPTION" ]; then
+            echo "❌ Missing version or description"
+            exit 1
+          fi
+          echo "✅ Version: $VERSION"
+          echo "✅ Description: $DESCRIPTION"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "DESCRIPTION=$DESCRIPTION" >> $GITHUB_ENV
+
+      - name: Build snapshot image
+        run: |
+          echo "🚀 Building snapshot image abc:snapshot_${VERSION}-${GITHUB_SHA}"
+          echo "Deploying to Dev cluster..."
+
+  release-build:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate release_version.txt
+        run: |
+          if [ ! -f release_version.txt ]; then
+            echo "❌ release_version.txt not found!"
+            exit 1
+          fi
+          VERSION=$(grep 'version:' release_version.txt | awk '{print $2}')
+          DESCRIPTION=$(grep 'Description:' release_version.txt | cut -d':' -f2- | xargs)
+          if [ -z "$VERSION" ] || [ -z "$DESCRIPTION" ]; then
+            echo "❌ Missing version or description"
+            exit 1
+          fi
+          echo "✅ Version: $VERSION"
+          echo "✅ Description: $DESCRIPTION"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "DESCRIPTION=$DESCRIPTION" >> $GITHUB_ENV
+
+      - name: Check for duplicate tag
+        run: |
+          if git rev-parse "v${VERSION}" >/dev/null 2>&1; then
+            echo "❌ Tag v${VERSION} already exists!"
+            exit 1
+          fi
+          echo "✅ No duplicate tag found."
+
+      - name: Create Git tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "v${VERSION}" -m "Release ${VERSION}"
+          git push origin "v${VERSION}"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.VERSION }}
+          name: Release ${{ env.VERSION }}
+          body: |
+            Version: ${{ env.VERSION }}
+            Description: ${{ env.DESCRIPTION }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Deploy latest release to Dev
+        run: |
+          echo "🚀 Deploying release version ${VERSION} to Dev cluster..."

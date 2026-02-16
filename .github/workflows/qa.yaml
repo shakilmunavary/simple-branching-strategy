@@ -1,0 +1,36 @@
+name: QC Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to deploy (e.g., 1.25.5)'
+        required: true
+
+jobs:
+  qc-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate release_version.txt
+        run: |
+          if [ ! -f release_version.txt ]; then
+            echo "❌ release_version.txt not found!"
+            exit 1
+          fi
+          VERSION=$(grep -i '^version:' release_version.txt | awk '{print $2}')
+          DESCRIPTION=$(grep -i '^description:' release_version.txt | cut -d':' -f2- | xargs)
+          if [ -z "$VERSION" ] || [ -z "$DESCRIPTION" ]; then
+            echo "❌ Missing version or description"
+            exit 1
+          fi
+          echo "✅ Version in file: $VERSION"
+          echo "✅ Description: $DESCRIPTION"
+
+      - name: Deploy to QC
+        run: |
+          echo "🚀 Deploying version ${{ github.event.inputs.version }} to QC cluster..."
+          echo "✅ QC deployment simulated."
