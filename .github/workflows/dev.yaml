@@ -9,6 +9,9 @@ on:
     branches:
       - main
 
+permissions:
+  contents: write   # ✅ allows creating/pushing tags and releases
+
 jobs:
   dev-build:
     runs-on: ubuntu-latest
