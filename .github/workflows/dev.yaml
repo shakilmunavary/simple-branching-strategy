@@ -8,7 +8,9 @@ on:
     types: [closed]
     branches:
       - main
-  permissions: contents: write # ✅ allows creating/pushing tags and releases
+
+permissions:
+  contents: write   # ✅ allows creating/pushing tags and releases
 
 jobs:
   dev-build:
